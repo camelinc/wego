@@ -6,9 +6,9 @@ import (
 	"strconv"
 
 	"github.com/schachmat/ingo"
-	_ "github.com/schachmat/wego/backends"
-	_ "github.com/schachmat/wego/frontends"
-	"github.com/schachmat/wego/iface"
+	_ "github.com/camelinc/wego/backends"
+	_ "github.com/camelinc/wego/frontends"
+	"github.com/camelinc/wego/iface"
 )
 
 func main() {
