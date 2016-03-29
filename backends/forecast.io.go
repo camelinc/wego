@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"encoding/json"
 	"time"
+	"os"
 
 	"github.com/camelinc/wego/iface"
 )
@@ -93,6 +94,17 @@ const (
 	forecastWuri = "https://api.forecast.io/forecast/%s/%s,%s?units=si&lang=de"
 )
 
+func (dp DataPoint) Render() {
+	var b []byte
+	var err error
+	b, err = json.MarshalIndent(dp, "", "\t")
+	if err != nil {
+		log.Fatal(err)
+	}
+	os.Stdout.Write(b)
+}
+
+
 func (db *DataBlock) Convert(c *forecastConfig) []iface.Day {
 	var forecast []iface.Day
 
@@ -103,27 +115,44 @@ func (db *DataBlock) Convert(c *forecastConfig) []iface.Day {
 		var slot iface.Cond
 		slot = dp.Convert(c)
 
+		//skip today
+		// if slot.Time.Day() == time.Now().Day() {
+		// 	continue
+		// }
+
+		// dp.Render()
+
 		if c.debug {
-			log.Printf("Adding DataPoint: %02d\t%v\n", cnt, slot)
-			log.Printf("Adding DataPoint: %v\n", day.Date)
+			log.Printf("DataPoint: %02d\t%v\n", cnt, slot.Time)
 		}
 
 		if day == nil || day.Date.Day() != slot.Time.Day() {
-			//skip today
-			if slot.Time.Day() == time.Now().Day() {
-				continue
-			}
+			//is day already set?
+			if len(day.Slots) >= 1 {
+				if dp.TemperatureMax != nil && *dp.TemperatureMax >= 0 {
+					day.MaxtempC = new(float32)
+					*day.MaxtempC = *dp.TemperatureMax
+				}
 
-			if c.debug {
-				log.Printf("New Day: %d\t%v\n", cnt, day)
-				for i,cond := range day.Slots {
-					log.Printf("New Day Slot: %d\t%v\n", i, cond)
+				if dp.TemperatureMax != nil && *dp.TemperatureMax >= 0 {
+					day.MintempC = new(float32)
+					*day.MintempC = *dp.TemperatureMin
+				}
+
+				forecast = append(forecast, *day)
+
+				if c.debug {
+					log.Printf("New Day: %02d\t%v\n", cnt, day)
+					for i,cond := range day.Slots {
+						log.Printf("New Day Slot: %02d\t%v\n", i, cond)
+					}
 				}
 			}
 
 			day = new(iface.Day)
 			day.Date = slot.Time
 			day.Slots = []iface.Cond{slot}
+		// only add relevant Slots
 		}else{
 			if slot.Time.Hour() == 8 ||
 					slot.Time.Hour() == 12 ||
@@ -133,31 +162,16 @@ func (db *DataBlock) Convert(c *forecastConfig) []iface.Day {
 				day.Slots = append(day.Slots, slot)
 
 				if c.debug {
-					log.Printf("Adding DataPoint: %02d\t%s\t%v\n", cnt, slot.Time, day)
+					// log.Printf("Adding Slot: %02d\t>%p<\t>%v<\t>%v<\n", len(day.Slots), &slot, slot.Time, day)
 				}
 			}else if(false) {
 				day.Date = slot.Time
 				day.Slots = append(day.Slots, slot)
 			}
-			continue
 		}
-
-		if dp.TemperatureMax != nil && *dp.TemperatureMax >= 0 {
-			day.MaxtempC = new(float32)
-			*day.MaxtempC = *dp.TemperatureMax
-		}
-
-		if dp.TemperatureMax != nil && *dp.TemperatureMax >= 0 {
-			day.MintempC = new(float32)
-			*day.MintempC = *dp.TemperatureMin
-		}
-
-		if c.debug {
-			log.Printf("New DataPoint: %d\t%s\t%v\n", cnt, day.Date, dp)
-		}
-
-		forecast = append(forecast, *day)
 	}
+	forecast = append(forecast, *day)
+
 	return forecast
 }
 
@@ -289,6 +303,8 @@ func (c *forecastConfig) Fetch(location string, numdays int) iface.Data {
 	ret.Current = resp.Currently.Convert(c)
 	//ret.Forecast = resp.Daily.Convert()
 	ret.Forecast = resp.Hourly.Convert(c)
+
+
 	return ret
 }
 
