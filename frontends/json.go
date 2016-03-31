@@ -6,7 +6,7 @@ import (
 	"log"
 	"os"
 
-	"github.com/camelinc/wego/iface"
+	"github.com/schachmat/wego/iface"
 )
 
 type jsnConfig struct {

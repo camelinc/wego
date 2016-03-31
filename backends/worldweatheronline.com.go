@@ -13,7 +13,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/camelinc/wego/iface"
+	"github.com/schachmat/wego/iface"
 )
 
 type wwoCond struct {

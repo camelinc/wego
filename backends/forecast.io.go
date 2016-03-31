@@ -1,23 +1,23 @@
 package backends
 
 import (
-	"io/ioutil"
-	"net/http"
-	"log"
+	"encoding/json"
 	"flag"
 	"fmt"
-	"encoding/json"
-	"time"
+	"io/ioutil"
+	"log"
+	"net/http"
 	"os"
+	"time"
 
-	"github.com/camelinc/wego/iface"
+	"github.com/schachmat/wego/iface"
 )
 
 type forecastConfig struct {
-	apiKey   string
-	latitude string
+	apiKey    string
+	latitude  string
 	longitude string
-	debug    bool
+	debug     bool
 }
 type Flags struct {
 	DarkSkyUnavailable string   `json:"darksky-unavailable"`
@@ -32,26 +32,26 @@ type Flags struct {
 }
 
 type DataPoint struct {
-	Time                   float64 `json:"time"`
-	Summary                string  `json:"summary"`
-	Icon                   string  `json:"icon"`
-	SunriseTime            float32 `json:"sunriseTime"`
-	SunsetTime             float32 `json:"sunsetTime"`
+	Time                   float64  `json:"time"`
+	Summary                string   `json:"summary"`
+	Icon                   string   `json:"icon"`
+	SunriseTime            float32  `json:"sunriseTime"`
+	SunsetTime             float32  `json:"sunsetTime"`
 	PrecipIntensity        *float32 `json:"precipIntensity"`
 	PrecipIntensityMax     *float32 `json:"precipIntensityMax"`
-	PrecipIntensityMaxTime float32 `json:"precipIntensityMaxTime"`
-	PrecipProbability      float32 `json:"precipProbability"`
-	PrecipType             string  `json:"precipType"`
+	PrecipIntensityMaxTime float32  `json:"precipIntensityMaxTime"`
+	PrecipProbability      float32  `json:"precipProbability"`
+	PrecipType             string   `json:"precipType"`
 	PrecipAccumulation     *float32 `json:"precipAccumulation"`
 	Temperature            *float32 `json:"temperature"`
 	TemperatureMin         *float32 `json:"temperatureMin"`
-	TemperatureMinTime     float32 `json:"temperatureMinTime"`
+	TemperatureMinTime     float32  `json:"temperatureMinTime"`
 	TemperatureMax         *float32 `json:"temperatureMax"`
-	TemperatureMaxTime     float32 `json:"temperatureMaxTime"`
+	TemperatureMaxTime     float32  `json:"temperatureMaxTime"`
 	ApparentTemperature    *float32 `json:"apparentTemperature"`
 	DewPoint               *float32 `json:"dewPoint"`
 	WindSpeed              *float32 `json:"windSpeed"`
-	WindBearing            float32 `json:"windBearing"`
+	WindBearing            float32  `json:"windBearing"`
 	CloudCover             *float32 `json:"cloudCover"`
 	Humidity               *float32 `json:"humidity"`
 	Pressure               *float32 `json:"pressure"`
@@ -73,18 +73,18 @@ type alert struct {
 	Expires     float64 `json:"expires"`
 }
 type Forecast struct {
-	Latitude  *float32   `json:"latitude"`
-	Longitude *float32   `json:"longitude"`
+	Latitude  *float32  `json:"latitude"`
+	Longitude *float32  `json:"longitude"`
 	Timezone  string    `json:"timezone"`
-	Offset    *float32   `json:"offset"`
+	Offset    *float32  `json:"offset"`
 	Currently DataPoint `json:"currently"`
 	Minutely  DataBlock `json:"minutely"`
 	Hourly    DataBlock `json:"hourly"`
 	Daily     DataBlock `json:"daily"`
 	Alerts    []alert   `json:"alerts"`
 	Flags     Flags     `json:"flags"`
-	APICalls  *int       `json:"apicalls"`
-	Code      *int       `json:"code"`
+	APICalls  *int      `json:"apicalls"`
+	Code      *int      `json:"code"`
 }
 
 const (
@@ -103,7 +103,6 @@ func (dp DataPoint) Render() {
 	}
 	os.Stdout.Write(b)
 }
-
 
 func (db *DataBlock) Convert(c *forecastConfig) []iface.Day {
 	var forecast []iface.Day
@@ -143,7 +142,7 @@ func (db *DataBlock) Convert(c *forecastConfig) []iface.Day {
 
 				if c.debug {
 					log.Printf("New Day: %02d\t%v\n", cnt, day)
-					for i,cond := range day.Slots {
+					for i, cond := range day.Slots {
 						log.Printf("New Day Slot: %02d\t%v\n", i, cond)
 					}
 				}
@@ -152,19 +151,19 @@ func (db *DataBlock) Convert(c *forecastConfig) []iface.Day {
 			day = new(iface.Day)
 			day.Date = slot.Time
 			day.Slots = []iface.Cond{slot}
-		// only add relevant Slots
-		}else{
+			// only add relevant Slots
+		} else {
 			if slot.Time.Hour() == 8 ||
-					slot.Time.Hour() == 12 ||
-					slot.Time.Hour() == 19 ||
-					slot.Time.Hour() == 23 {
+				slot.Time.Hour() == 12 ||
+				slot.Time.Hour() == 19 ||
+				slot.Time.Hour() == 23 {
 				day.Date = slot.Time
 				day.Slots = append(day.Slots, slot)
 
 				if c.debug {
 					// log.Printf("Adding Slot: %02d\t>%p<\t>%v<\t>%v<\n", len(day.Slots), &slot, slot.Time, day)
 				}
-			}else if(false) {
+			} else if false {
 				day.Date = slot.Time
 				day.Slots = append(day.Slots, slot)
 			}
@@ -177,19 +176,19 @@ func (db *DataBlock) Convert(c *forecastConfig) []iface.Day {
 
 func (dp *DataPoint) Convert(c *forecastConfig) iface.Cond {
 	codemap := map[string]iface.WeatherCode{
-		"wind": iface.CodeUnknown,
-		"hail": iface.CodeUnknown,
-		"tornado": iface.CodeUnknown,
-		"cloudy": iface.CodeCloudy,
-		"fog": iface.CodeFog,
-		"rain": iface.CodeLightRain,
-		"sleet": iface.CodeLightSleet,
-		"snow": iface.CodeLightSnow,
-		"partly-cloudy-day": iface.CodePartlyCloudy,
+		"wind":                iface.CodeUnknown,
+		"hail":                iface.CodeUnknown,
+		"tornado":             iface.CodeUnknown,
+		"cloudy":              iface.CodeCloudy,
+		"fog":                 iface.CodeFog,
+		"rain":                iface.CodeLightRain,
+		"sleet":               iface.CodeLightSleet,
+		"snow":                iface.CodeLightSnow,
+		"partly-cloudy-day":   iface.CodePartlyCloudy,
 		"partly-cloudy-night": iface.CodePartlyCloudy,
-		"clear-day": iface.CodeSunny,
-		"clear-night": iface.CodeSunny,
-		"thunderstorm": iface.CodeThunderyShowers,
+		"clear-day":           iface.CodeSunny,
+		"clear-night":         iface.CodeSunny,
+		"thunderstorm":        iface.CodeThunderyShowers,
 	}
 
 	var today iface.Cond
@@ -293,17 +292,17 @@ func (c *forecastConfig) Fetch(location string, numdays int) iface.Data {
 	//log.Printf("Weather response: %v\n", resp.Currently)
 	//log.Printf("Weather response: %v\n", resp.Daily)
 
-	ret.Location = fmt.Sprintf("%s:%s", resp.Latitude, resp.Longitude)
-	var reqLatLon iface.LatLon
+	ret.Location = fmt.Sprintf("%f:%f", *resp.Latitude, *resp.Longitude)
+
+	var reqLatLon *iface.LatLon
+	reqLatLon = new(iface.LatLon)
 	reqLatLon.Latitude = *resp.Latitude
 	reqLatLon.Longitude = *resp.Longitude
-	ret.GeoLoc = &reqLatLon
-
+	ret.GeoLoc = reqLatLon
 
 	ret.Current = resp.Currently.Convert(c)
 	//ret.Forecast = resp.Daily.Convert()
 	ret.Forecast = resp.Hourly.Convert(c)
-
 
 	return ret
 }
